@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ConnectAI — LinkedIn DM Generator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Generate hyper-personalized LinkedIn connection messages powered by Claude AI",
   "permissions": [
     "storage",
@@ -9,7 +9,8 @@
     "scripting"
   ],
   "host_permissions": [
-    "https://www.linkedin.com/*"
+    "https://www.linkedin.com/*",
+    "https://api.anthropic.com/*"
   ],
   "action": {
     "default_popup": "popup.html",

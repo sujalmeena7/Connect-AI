@@ -57,7 +57,7 @@
             Anthropic API Key
           </h2>
           <p class="section-desc">
-            Your key is stored locally and never leaves your browser.
+            Your key is stored locally and never leaves your browser except to call the Anthropic API.
             <a href="https://console.anthropic.com/account/keys" target="_blank" class="link">Get your key →</a>
           </p>
 
@@ -80,6 +80,11 @@
               <p class="field-hint">Format: <code>sk-ant-api03-...</code></p>
             </div>
           </div>
+
+          <div id="key-validation" class="key-validation" style="display:none">
+            <span id="key-validation-icon"></span>
+            <span id="key-validation-msg"></span>
+          </div>
         </section>
 
         <div class="actions">
@@ -89,6 +94,24 @@
           </button>
         </div>
       </form>
+
+      <!-- USAGE STATS -->
+      <section class="section stats-section">
+        <h2 class="section-title">
+          <span class="section-icon">📊</span>
+          Usage Stats
+        </h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-generations">0</div>
+            <div class="stat-label">Generations</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-saved">0</div>
+            <div class="stat-label">Saved Messages</div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <div id="toast" class="toast" role="alert" aria-live="polite"></div>
