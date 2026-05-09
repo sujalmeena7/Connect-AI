@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ConnectAI</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+
+  <!-- ONBOARDING OVERLAY -->
+  <div id="onboarding-overlay" class="onboarding-overlay" style="display:none">
+    <div class="onboarding-content">
+      <div class="onboarding-badge">✨</div>
+      <h2>Welcome to ConnectAI</h2>
+      <p class="onboarding-sub">Generate hyper-personalized LinkedIn connection messages in seconds.</p>
+      <div class="onboarding-steps">
+        <div class="onboarding-step">
+          <span class="step-num">1</span>
+          <span>Navigate to any LinkedIn profile</span>
+        </div>
+        <div class="onboarding-step">
+          <span class="step-num">2</span>
+          <span>Select your outreach purpose</span>
+        </div>
+        <div class="onboarding-step">
+          <span class="step-num">3</span>
+          <span>Click Generate — get 3 tailored messages</span>
+        </div>
+      </div>
+      <button id="onboarding-dismiss" class="btn-primary" style="width:100%;margin-top:8px">Get Started</button>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="logo">
+      <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
+        <rect width="28" height="28" rx="7" fill="#0A66C2"/>
+        <path d="M8 14C8 10.686 10.686 8 14 8C17.314 8 20 10.686 20 14" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M14 20V14" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+        <circle cx="14" cy="14" r="2" fill="white"/>
+      </svg>
+      <span class="logo-text">ConnectAI</span>
+    </div>
+    <button id="settings-btn" class="icon-btn" title="Settings">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- STATE: NOT ON LINKEDIN PROFILE -->
+  <div id="state-not-linkedin" class="state-view" style="display:none">
+    <div class="state-icon">🔗</div>
+    <h2>Visit a LinkedIn Profile</h2>
+    <p>Navigate to a LinkedIn profile page (<code>linkedin.com/in/…</code>) to generate personalized messages.</p>
+  </div>
+
+  <!-- STATE: API KEY MISSING -->
+  <div id="state-no-key" class="state-view" style="display:none">
+    <div class="state-icon">🔑</div>
+    <h2>Setup Required</h2>
+    <p>Add your Anthropic API key and profile info to start generating messages.</p>
+    <button id="go-settings-btn" class="btn-primary">Open Settings</button>
+  </div>
+
+  <!-- STATE: MAIN UI -->
+  <div id="state-main" style="display:none">
+
+    <!-- TARGET CARD -->
+    <section class="card" id="target-card">
+      <div class="card-label">Target Profile</div>
+      <div class="profile-row">
+        <div class="profile-avatar" id="target-avatar">?</div>
+        <div class="profile-info">
+          <div class="profile-name" id="target-name">—</div>
+          <div class="profile-role" id="target-role">—</div>
+          <div class="profile-company" id="target-company">—</div>
+        </div>
+      </div>
+      <div class="profile-meta">
+        <span class="meta-tag" id="target-skills-tag"></span>
+      </div>
+      <button id="rescrape-btn" class="ghost-btn" title="Re-scrape profile">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        Refresh
+      </button>
+    </section>
+
+    <!-- SENDER INFO -->
+    <section class="card" id="sender-card">
+      <div class="card-label">Your Info
+        <button id="edit-sender-btn" class="inline-edit-btn">Edit</button>
+      </div>
+      <div id="sender-display">
+        <div class="sender-row">
+          <span class="sender-label">Name</span>
+          <span class="sender-val" id="display-sender-name">—</span>
+        </div>
+        <div class="sender-row">
+          <span class="sender-label">Role</span>
+          <span class="sender-val" id="display-sender-role">—</span>
+        </div>
+        <div class="sender-row">
+          <span class="sender-label">School/Co</span>
+          <span class="sender-val" id="display-sender-college">—</span>
+        </div>
+      </div>
+      <div id="sender-edit" style="display:none">
+        <div class="edit-field">
+          <label>Name</label>
+          <input type="text" id="edit-name" />
+        </div>
+        <div class="edit-field">
+          <label>Role</label>
+          <input type="text" id="edit-role" />
+        </div>
+        <div class="edit-field">
+          <label>School/Co</label>
+          <input type="text" id="edit-college" />
+        </div>
+        <div class="edit-actions">
+          <button id="save-sender-btn" class="btn-sm-primary">Save</button>
+          <button id="cancel-sender-btn" class="btn-sm-ghost">Cancel</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PURPOSE SELECTOR -->
+    <section class="card">
+      <div class="card-label">Purpose</div>
+      <div class="pill-group" id="purpose-group">
+        <button class="pill active" data-purpose="Internship Referral">Internship Referral</button>
+        <button class="pill" data-purpose="General Networking">General Networking</button>
+        <button class="pill" data-purpose="Collaboration">Collaboration</button>
+        <button class="pill" data-purpose="Job Referral">Job Referral</button>
+        <button class="pill pill-custom" data-purpose="Custom">✏️ Custom</button>
+      </div>
+      <div id="custom-purpose-wrapper" class="custom-purpose-wrapper" style="display:none">
+        <input type="text" id="custom-purpose-input" placeholder="e.g. Seeking mentorship in ML…" maxlength="120" />
+      </div>
+    </section>
+
+    <!-- GENERATE BUTTON -->
+    <button id="generate-btn" class="btn-generate">
+      <span id="generate-text">Generate Messages</span>
+      <span id="generate-spinner" class="spinner" style="display:none"></span>
+    </button>
+
+    <!-- KEYBOARD HINT -->
+    <div class="keyboard-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> to generate</div>
+
+    <!-- ERROR BANNER -->
+    <div id="error-banner" class="error-banner" style="display:none">
+      <span id="error-msg"></span>
+      <button id="retry-btn" class="retry-link">Retry</button>
+    </div>
+
+    <!-- SKELETON LOADER -->
+    <section id="skeleton-section" style="display:none">
+      <div class="results-header">
+        <div class="card-label" style="margin-bottom:0">Crafting your messages…</div>
+      </div>
+      <div class="message-card skeleton-card">
+        <div class="skeleton-line skeleton-short"></div>
+        <div class="skeleton-line skeleton-full"></div>
+        <div class="skeleton-line skeleton-full"></div>
+        <div class="skeleton-line skeleton-medium"></div>
+      </div>
+      <div class="message-card skeleton-card" style="animation-delay:.1s">
+        <div class="skeleton-line skeleton-short"></div>
+        <div class="skeleton-line skeleton-full"></div>
+        <div class="skeleton-line skeleton-full"></div>
+        <div class="skeleton-line skeleton-medium"></div>
+      </div>
+      <div class="message-card skeleton-card" style="animation-delay:.2s">
+        <div class="skeleton-line skeleton-short"></div>
+        <div class="skeleton-line skeleton-full"></div>
+        <div class="skeleton-line skeleton-full"></div>
+        <div class="skeleton-line skeleton-medium"></div>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="results-section" style="display:none">
+      <div class="results-header">
+        <div class="card-label" style="margin-bottom:0">Generated Messages</div>
+        <button id="toggle-saved-btn" class="saved-toggle-btn" title="View saved messages">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span id="saved-count-label">Saved (0)</span>
+        </button>
+      </div>
+
+      <div id="messages-container"></div>
+
+      <!-- SAVED MESSAGES PANEL -->
+      <div id="saved-panel" style="display:none">
+        <div id="saved-messages-container"></div>
+        <div id="saved-empty" class="saved-empty">
+          <span>📌</span>
+          <p>No saved messages yet. Bookmark messages you like!</p>
+        </div>
+      </div>
+
+      <div id="tip-section" class="tip-card" style="display:none">
+        <div class="tip-icon">💡</div>
+        <p id="tip-text"></p>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
