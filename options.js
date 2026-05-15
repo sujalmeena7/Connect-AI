@@ -4,6 +4,7 @@ const form = document.getElementById("settings-form");
 const senderName = document.getElementById("sender-name");
 const senderRole = document.getElementById("sender-role");
 const senderCollege = document.getElementById("sender-college");
+const apiProviderSelect = document.getElementById("api-provider");
 const apiKeyInput = document.getElementById("api-key");
 const saveBtn = document.getElementById("save-btn");
 const saveText = document.getElementById("save-text");
@@ -29,10 +30,30 @@ chrome.storage.sync.get(
   }
 );
 
+const apiKeyHint = document.getElementById("api-key-hint");
+
 // API key from storage.local (secure — doesn't sync to Google servers)
-chrome.storage.local.get(["apiKey"], (data) => {
+chrome.storage.local.get(["apiKey", "apiProvider"], (data) => {
   if (data.apiKey) apiKeyInput.value = data.apiKey;
+  if (data.apiProvider) apiProviderSelect.value = data.apiProvider;
+  updatePlaceholder();
 });
+
+apiProviderSelect.addEventListener("change", updatePlaceholder);
+
+function updatePlaceholder() {
+  const p = apiProviderSelect.value;
+  if (p === "claude") {
+    apiKeyInput.placeholder = "sk-ant-...";
+    if (apiKeyHint) apiKeyHint.innerHTML = 'Format: <code>sk-ant-api03-...</code>';
+  } else if (p === "openai") {
+    apiKeyInput.placeholder = "sk-...";
+    if (apiKeyHint) apiKeyHint.innerHTML = 'Format: <code>sk-proj-...</code> or <code>sk-...</code>';
+  } else if (p === "gemini") {
+    apiKeyInput.placeholder = "AIza...";
+    if (apiKeyHint) apiKeyHint.innerHTML = 'Format: <code>AIza...</code>';
+  }
+}
 
 // Migration: if apiKey still in sync, migrate it
 chrome.storage.sync.get(["apiKey"], (data) => {
@@ -69,6 +90,7 @@ form.addEventListener("submit", async (e) => {
   const name = senderName.value.trim();
   const role = senderRole.value.trim();
   const college = senderCollege.value.trim();
+  const provider = apiProviderSelect.value;
   const key = apiKeyInput.value.trim();
 
   if (!name) {
@@ -77,10 +99,16 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
-  if (key && !key.startsWith("sk-ant-")) {
-    showToast("API key format looks wrong — should start with sk-ant-", "error");
-    apiKeyInput.focus();
-    return;
+  if (key) {
+    if (provider === "claude" && !key.startsWith("sk-ant-")) {
+      showToast("Claude API key should start with sk-ant-", "error");
+      apiKeyInput.focus();
+      return;
+    } else if (provider === "openai" && !key.startsWith("sk-")) {
+      showToast("OpenAI API key should start with sk-", "error");
+      apiKeyInput.focus();
+      return;
+    }
   }
 
   // Show loading
@@ -96,7 +124,7 @@ form.addEventListener("submit", async (e) => {
     senderCollege: college
   });
 
-  chrome.storage.local.set({ apiKey: key }, async () => {
+  chrome.storage.local.set({ apiKey: key, apiProvider: provider }, async () => {
     if (chrome.runtime.lastError) {
       saveText.style.display = "block";
       saveSpinner.style.display = "none";
@@ -112,7 +140,7 @@ form.addEventListener("submit", async (e) => {
       try {
         const result = await new Promise((resolve, reject) => {
           chrome.runtime.sendMessage(
-            { type: "VALIDATE_API_KEY", apiKey: key },
+            { type: "VALIDATE_API_KEY", apiKey: key, apiProvider: provider },
             (response) => {
               if (chrome.runtime.lastError) {
                 reject(new Error(chrome.runtime.lastError.message));
@@ -135,7 +163,7 @@ form.addEventListener("submit", async (e) => {
           showKeyValidation("warning", "Rate limited — key saved, try later");
           showToast("Settings saved ✓ (couldn't validate — rate limited)", "success");
         } else {
-          showKeyValidation("warning", "Couldn't verify key — saved anyway");
+          showKeyValidation("warning", "Error: " + msg);
           showToast("Settings saved ✓", "success");
         }
       }

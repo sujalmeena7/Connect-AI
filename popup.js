@@ -95,15 +95,15 @@ async function init() {
   const syncSettings = await chromeStorageGet("sync", [
     "senderName", "senderRole", "senderCollege"
   ]);
-  let localSettings = await chromeStorageGet("local", ["apiKey"]);
+  let localSettings = await chromeStorageGet("local", ["apiKey", "apiProvider"]);
 
   // Migration: move API key from sync → local if needed
   if (!localSettings.apiKey) {
     const oldSync = await chromeStorageGet("sync", ["apiKey"]);
     if (oldSync.apiKey) {
-      await chromeStorageSet("local", { apiKey: oldSync.apiKey });
+      await chromeStorageSet("local", { apiKey: oldSync.apiKey, apiProvider: "claude" });
       chrome.storage.sync.remove("apiKey");
-      localSettings = { apiKey: oldSync.apiKey };
+      localSettings = { apiKey: oldSync.apiKey, apiProvider: "claude" };
     }
   }
 
@@ -116,7 +116,8 @@ async function init() {
     name: syncSettings.senderName || "",
     role: syncSettings.senderRole || "",
     college: syncSettings.senderCollege || "",
-    apiKey: localSettings.apiKey
+    apiKey: localSettings.apiKey,
+    apiProvider: localSettings.apiProvider || "claude"
   };
 
   // Load saved messages
@@ -463,6 +464,7 @@ async function handleShorten(card) {
           type: "SHORTEN_MESSAGE",
           payload: {
             apiKey: currentSenderInfo.apiKey,
+            apiProvider: currentSenderInfo.apiProvider,
             message: card._messageData.message,
             targetLength: 300
           }
@@ -667,6 +669,7 @@ async function handleGenerate() {
           type: "GENERATE_MESSAGES",
           payload: {
             apiKey: currentSenderInfo.apiKey,
+            apiProvider: currentSenderInfo.apiProvider,
             senderInfo: {
               name: currentSenderInfo.name,
               role: currentSenderInfo.role,
@@ -718,8 +721,8 @@ function handleApiError(err) {
     showError("Invalid or missing API key. Check Settings.");
   } else if (msg === "RATE_LIMIT") {
     showError("Rate limit hit. Try again in a moment.");
-  } else if (msg === "JSON_PARSE_ERROR") {
-    showError("Unexpected response from Claude. Please retry.");
+  } else if (msg.startsWith("JSON_PARSE_ERROR")) {
+    showError("Unexpected response from AI: " + msg.replace("JSON_PARSE_ERROR", "").substring(0, 100));
   } else if (msg === "REQUEST_TIMEOUT") {
     showError("Request timed out. The API may be slow — please retry.");
   } else {
